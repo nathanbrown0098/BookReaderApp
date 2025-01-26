@@ -30,3 +30,23 @@ main {
     border: 1px solid #ddd;
     padding: 10px;
 }
+
+/* Highlighted words style */
+.highlighted {
+    background-color: blueviolet; /* Adjust the color as needed */
+}
+
+/* Context Menu */
+#customContextMenu {
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+#customContextMenu div {
+    padding: 5px;
+    cursor: pointer;
+}
+
+#customContextMenu div:hover {
+    background-color: #f1f1f1;
+}
