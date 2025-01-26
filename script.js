@@ -1,12 +1,34 @@
+import { makeAutoObservable, runInAction } from 'https://cdn.skypack.dev/mobx';
+
+// MobX state management (if you're using MobX)
+class AnnotationStore {
+    highlightedTextDict = {};
+
+    constructor() {
+        makeAutoObservable(this); // Automatically make all fields observable and actions for methods
+    }
+
+    addHighlight(pageNumber, text) {
+        // Ensure that the state mutation is wrapped in a MobX action
+        runInAction(() => {
+            // Check if the page's highlight array exists, if not, initialize it
+            if (!this.highlightedTextDict[pageNumber]) {
+                this.highlightedTextDict[pageNumber] = [];
+            }
+            // Push the highlight text into the array for that page
+            this.highlightedTextDict[pageNumber].push(text);
+        });
+    }
+}
+
+const annotationStore = new AnnotationStore();
+
 // Define your Adobe Client ID (get it from Adobe PDF Embed API dashboard)
 const CLIENT_ID = 'd5d01981d6594f918d6526e3c250903f'; // Replace with your client ID
 
 // Initialize Adobe PDF Embed API
 let adobeViewer = null;
 let annotationManager = null; // Store the annotation manager
-
-// Store highlighted text in a dictionary (this could be on the backend)
-let highlightedTextDict = {};
 
 // Handle file upload
 function handleFileUpload(fileInput, embedPDF) {
@@ -26,7 +48,7 @@ function embedPDF(pdfURL) {
     const viewerElement = document.getElementById('pdfViewer');
     
     // Initialize the Adobe PDF Embed API viewer
-    adobeDCView = new AdobeDC.View({ clientId: CLIENT_ID, divId: "pdfViewer" });
+    const adobeDCView = new AdobeDC.View({ clientId: CLIENT_ID, divId: "pdfViewer" });
 
     adobeDCView.previewFile({
         content: {
@@ -59,21 +81,24 @@ function embedPDF(pdfURL) {
     }).then(adobeViewer => {
         adobeViewer.getAnnotationManager().then(manager => {
             annotationManager = manager;
-            
+
             // Listen for updates to annotations (like highlights)
             annotationManager.listen("annotationsUpdated", function(annotations) {
-                console.log("Annotations updated:", annotations);
+                console.log("Annotations updated:", annotations);  // Debug log to confirm annotations are updated
+                
+                if (!annotations || annotations.length === 0) {
+                    console.log("No annotations found.");
+                }
+                
                 annotations.forEach(function(annotation) {
-                    if (annotation.type === 'Highlight') {
-                        console.log("Highlighted text:", annotation.text);
-                        
-                        // Store the highlighted text in the dictionary (could send to backend)
-                        const pageNumber = annotation.pageNumber;
-                        highlightedTextDict[pageNumber] = highlightedTextDict[pageNumber] || [];
-                        highlightedTextDict[pageNumber].push(annotation.text);
+                    console.log("Annotation type:", annotation.type);  // Debug log for type of annotation
 
-                        // Optional: You can send highlightedTextDict to the backend here
-                        // sendHighlightedTextToBackend(highlightedTextDict);
+                    if (annotation.type === 'Highlight') {
+                        console.log("Highlighted text:", annotation.text);  // Debug log to print highlighted text
+
+                        // Store the highlighted text in the MobX state (now inside action)
+                        const pageNumber = annotation.pageNumber;
+                        annotationStore.addHighlight(pageNumber, annotation.text);
                     }
                 });
             });
