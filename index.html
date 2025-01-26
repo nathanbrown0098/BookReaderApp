@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Book Reader with Adobe PDF Embed API</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>PDF Book Reader</h1>
+        <input type="file" id="fileInput" accept="application/pdf">
+        <input type="number" id="pageNumberInput" placeholder="Go to page" />
+    </header>
+    <main>
+        <div id="pdfViewer"></div>
+    </main>
+    <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

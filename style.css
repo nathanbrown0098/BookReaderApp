@@ -1,0 +1,32 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: #333;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+input[type="file"],
+input[type="number"] {
+    padding: 5px;
+    margin-top: 10px;
+}
+
+main {
+    margin: 20px;
+    padding-top: 10px;
+}
+
+#pdfViewer {
+    height: 80vh;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
