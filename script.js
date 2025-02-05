@@ -25,10 +25,12 @@ const annotationStore = new AnnotationStore();
 
 // Define your Adobe Client ID (get it from Adobe PDF Embed API dashboard)
 const CLIENT_ID = 'd5d01981d6594f918d6526e3c250903f'; // Replace with your client ID
-
-// Initialize Adobe PDF Embed API
-let adobeViewer = null;
-let annotationManager = null; // Store the annotation manager
+const eventOptions = {
+    // If no event is passed in listenOn, all annotation events will be received
+    listenOn: [
+        "ANNOTATION_SELECTED"
+    ]
+}; 
 
 // Handle file upload
 function handleFileUpload(fileInput, embedPDF) {
@@ -44,13 +46,10 @@ function handleFileUpload(fileInput, embedPDF) {
 }
 
 // Embed the PDF into the viewer
-function embedPDF(pdfURL) {
-    const viewerElement = document.getElementById('pdfViewer');
-    
+function embedPDF(pdfURL) {   
     // Initialize the Adobe PDF Embed API viewer
-    const adobeDCView = new AdobeDC.View({ clientId: CLIENT_ID, divId: "pdfViewer" });
-
-    adobeDCView.previewFile({
+    var adobeDCView = new AdobeDC.View({ clientId: CLIENT_ID, divId: "pdfViewer" });
+    var previewFilePromise = adobeDCView.previewFile({
         content: {
             location: {
                 url: pdfURL // URL for the uploaded PDF
@@ -63,45 +62,18 @@ function embedPDF(pdfURL) {
     }, {
         showDownloadPDF: true,
         showPrintPDF: true,
-        showLeftHandPanel: false,
         enableAnnotationAPIs: true, // Enable annotation APIs
         includePDFAnnotations: true // Include existing annotations
     });
 
-    // Initialize the annotation manager after embedding
-    adobeDCView.previewFile({
-        content: {
-            location: {
-                url: pdfURL
-            }
-        },
-        metaData: {
-            fileName: "Uploaded PDF"
-        }
-    }).then(adobeViewer => {
-        adobeViewer.getAnnotationManager().then(manager => {
-            annotationManager = manager;
-
+    // Initialize the annotation manager
+    previewFilePromise.then(adobeViewer => {
+        adobeViewer.getAnnotationManager().then(annotationManager => {
             // Listen for updates to annotations (like highlights)
-            annotationManager.listen("annotationsUpdated", function(annotations) {
-                console.log("Annotations updated:", annotations);  // Debug log to confirm annotations are updated
-                
-                if (!annotations || annotations.length === 0) {
-                    console.log("No annotations found.");
-                }
-                
-                annotations.forEach(function(annotation) {
-                    console.log("Annotation type:", annotation.type);  // Debug log for type of annotation
-
-                    if (annotation.type === 'Highlight') {
-                        console.log("Highlighted text:", annotation.text);  // Debug log to print highlighted text
-
-                        // Store the highlighted text in the MobX state (now inside action)
-                        const pageNumber = annotation.pageNumber;
-                        annotationStore.addHighlight(pageNumber, annotation.text);
-                    }
-                });
-            });
+            annotationManager.registerEventListener(
+                function(event) { console.log(event.type, event.data) },
+                eventOptions 
+            );
         });
     });
 }
@@ -125,8 +97,9 @@ function goToPage(pageNumber) {
 
 // Initialize everything
 const fileInput = document.getElementById('fileInput');
-const pageInput = document.getElementById('pageNumberInput');
 handleFileUpload(fileInput, embedPDF);
+
+const pageInput = document.getElementById('pageNumberInput');
 setupNavigation(pageInput);
 
 // Example of sending the highlighted text to the backend (could use an API for this)
