@@ -56,168 +56,16 @@ function embedPDF(pdfData, fileName) {
             enableFormFilling: false
         };
 
-        // Determine the type of PDF data we have
-        if (typeof pdfData === 'string') {
-            // Handle string data (URL or base64)
-            if (pdfData.startsWith('blob:')) {
-                console.log("Handling blob URL");
-                
-                // Use a direct approach with the blob URL
-                try {
-                    // Create an XMLHttpRequest to get the PDF data
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('GET', pdfData, true);
-                    xhr.responseType = 'arraybuffer';
-                    
-                    xhr.onload = function() {
-                        if (this.status === 200) {
-                            const arrayBuffer = this.response;
-                            console.log("PDF fetched as ArrayBuffer, length:", arrayBuffer.byteLength);
-                            
-                            // Use the Adobe DC View API to display the PDF
-                            adobeDCView.previewFile({
-                                content: { promise: Promise.resolve(arrayBuffer) },
-                                metaData: {
-                                    fileName: fileName || "PDF Book",
-                                    id: fileId
-                                }
-                            }, previewConfig)
-                            .then(viewer => {
-                                console.log("PDF successfully loaded");
-                                adobeViewer = viewer;
-                            })
-                            .catch(error => {
-                                console.error("Error loading PDF:", error);
-                                document.getElementById('pdfViewer').innerHTML = 
-                                    `<p>Error loading PDF: ${error.message || 'Unknown error'}. Please try again.</p>`;
-                            });
-                        } else {
-                            console.error("XHR error:", this.status);
-                            document.getElementById('pdfViewer').innerHTML = 
-                                `<p>Error loading PDF: HTTP status ${this.status}. Please try again.</p>`;
-                        }
-                    };
-                    
-                    xhr.onerror = function() {
-                        console.error("XHR network error");
-                        document.getElementById('pdfViewer').innerHTML = 
-                            `<p>Network error loading PDF. Please try again.</p>`;
-                    };
-                    
-                    xhr.send();
-                } catch (fetchError) {
-                    console.error("Error fetching blob URL:", fetchError);
-                    
-                    // Fallback to using the URL directly
-                    adobeDCView.previewFile({
-                        content: {
-                            location: {
-                                url: pdfData
-                            }
-                        },
-                        metaData: {
-                            fileName: fileName || "PDF Book",
-                            id: fileId
-                        }
-                    }, previewConfig)
-                    .then(viewer => {
-                        console.log("PDF successfully loaded with fallback method");
-                        adobeViewer = viewer;
-                    })
-                    .catch(error => {
-                        console.error("Error loading PDF with fallback method:", error);
-                        document.getElementById('pdfViewer').innerHTML = 
-                            `<p>Error loading PDF: ${error.message || 'Unknown error'}. Please try uploading the book again.</p>`;
-                    });
-                }
-            } 
-            // For data URLs (base64)
-            else if (pdfData.startsWith('data:application/pdf')) {
-                console.log("Handling data URL");
-                try {
-                    // Convert base64 to ArrayBuffer
-                    const base64 = pdfData.split(',')[1];
-                    const binaryString = atob(base64);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
-                    }
-                    const buffer = bytes.buffer;
-                    
-                    adobeDCView.previewFile({
-                        content: { promise: Promise.resolve(buffer) },
-                        metaData: {
-                            fileName: fileName || "PDF Book",
-                            id: fileId
-                        }
-                    }, previewConfig)
-                    .then(viewer => {
-                        console.log("PDF successfully loaded from base64");
-                        adobeViewer = viewer;
-                    })
-                    .catch(error => {
-                        console.error("Error loading PDF from base64:", error);
-                        document.getElementById('pdfViewer').innerHTML = 
-                            `<p>Error loading PDF: ${error.message || 'Unknown error'}. Please try again.</p>`;
-                    });
-                } catch (base64Error) {
-                    console.error("Error processing base64 data:", base64Error);
-                    document.getElementById('pdfViewer').innerHTML = 
-                        `<p>Error processing PDF data: ${base64Error.message || 'Unknown error'}. Please try uploading the book again.</p>`;
-                }
-            }
-            // For regular URLs
-            else {
-                console.log("Handling regular URL");
-                adobeDCView.previewFile({
-                    content: {
-                        location: {
-                            url: pdfData
-                        }
-                    },
-                    metaData: {
-                        fileName: fileName || "PDF Book",
-                        id: fileId
-                    }
-                }, previewConfig)
-                .then(viewer => {
-                    console.log("PDF successfully loaded from URL");
-                    adobeViewer = viewer;
-                })
-                .catch(error => {
-                    console.error("Error loading PDF from URL:", error);
-                    document.getElementById('pdfViewer').innerHTML = 
-                        `<p>Error loading PDF: ${error.message || 'Unknown error'}. Please try again.</p>`;
-                });
-            }
-        } 
-        // Handle ArrayBuffer data directly
-        else if (pdfData instanceof ArrayBuffer) {
-            console.log("Handling ArrayBuffer data");
-            adobeDCView.previewFile({
-                content: { promise: Promise.resolve(pdfData) },
-                metaData: {
-                    fileName: fileName || "PDF Book",
-                    id: fileId
-                }
-            }, previewConfig)
-            .then(viewer => {
-                console.log("PDF successfully loaded from ArrayBuffer");
-                adobeViewer = viewer;
-            })
-            .catch(error => {
-                console.error("Error loading PDF from ArrayBuffer:", error);
-                document.getElementById('pdfViewer').innerHTML = 
-                    `<p>Error loading PDF: ${error.message || 'Unknown error'}. Please try again.</p>`;
-            });
-        }
-        // Handle Blob data directly
-        else if (pdfData instanceof Blob) {
-            console.log("Handling Blob data");
+        // DIRECT APPROACH: If we have a Blob object, use it directly
+        if (pdfData instanceof Blob) {
+            console.log("Handling direct Blob data");
+            
             // Convert Blob to ArrayBuffer
             const reader = new FileReader();
             reader.onload = function(e) {
                 const arrayBuffer = e.target.result;
+                console.log("Blob converted to ArrayBuffer, length:", arrayBuffer.byteLength);
+                
                 adobeDCView.previewFile({
                     content: { promise: Promise.resolve(arrayBuffer) },
                     metaData: {
@@ -231,27 +79,147 @@ function embedPDF(pdfData, fileName) {
                 })
                 .catch(error => {
                     console.error("Error loading PDF from Blob:", error);
-                    document.getElementById('pdfViewer').innerHTML = 
-                        `<p>Error loading PDF: ${error.message || 'Unknown error'}. Please try again.</p>`;
+                    handlePdfLoadError(error);
                 });
             };
+            
             reader.onerror = function(error) {
                 console.error("Error reading Blob:", error);
-                document.getElementById('pdfViewer').innerHTML = 
-                    `<p>Error reading PDF data: ${error.message || 'Unknown error'}. Please try again.</p>`;
+                handlePdfLoadError(error, "Error reading PDF data");
             };
+            
             reader.readAsArrayBuffer(pdfData);
+            return;
         }
-        else {
-            console.error("Unsupported PDF data type:", typeof pdfData);
-            document.getElementById('pdfViewer').innerHTML = 
-                `<p>Error: Unsupported PDF data type. Please try uploading the book again.</p>`;
+        
+        // If we have a base64 data URL
+        if (typeof pdfData === 'string' && pdfData.startsWith('data:application/pdf')) {
+            console.log("Handling base64 data URL");
+            try {
+                // Convert base64 to ArrayBuffer
+                const base64 = pdfData.split(',')[1];
+                const binaryString = atob(base64);
+                const bytes = new Uint8Array(binaryString.length);
+                
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                const buffer = bytes.buffer;
+                console.log("Base64 converted to ArrayBuffer, length:", buffer.byteLength);
+                
+                adobeDCView.previewFile({
+                    content: { promise: Promise.resolve(buffer) },
+                    metaData: {
+                        fileName: fileName || "PDF Book",
+                        id: fileId
+                    }
+                }, previewConfig)
+                .then(viewer => {
+                    console.log("PDF successfully loaded from base64");
+                    adobeViewer = viewer;
+                })
+                .catch(error => {
+                    console.error("Error loading PDF from base64:", error);
+                    handlePdfLoadError(error);
+                });
+                
+                return;
+            } catch (base64Error) {
+                console.error("Error processing base64 data:", base64Error);
+                handlePdfLoadError(base64Error, "Error processing PDF data");
+                return;
+            }
         }
+        
+        // FALLBACK: Try to use a direct URL approach
+        if (typeof pdfData === 'string') {
+            console.log("Falling back to URL approach:", pdfData.substring(0, 50) + "...");
+            
+            // For blob URLs, we'll try a different approach
+            if (pdfData.startsWith('blob:')) {
+                console.log("Handling blob URL with direct approach");
+                
+                // Create an iframe to display the PDF (this is a fallback method)
+                const iframe = document.createElement('iframe');
+                iframe.src = pdfData;
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.border = 'none';
+                
+                const pdfViewer = document.getElementById('pdfViewer');
+                pdfViewer.innerHTML = '';
+                pdfViewer.appendChild(iframe);
+                
+                console.log("PDF loaded in iframe as fallback");
+                return;
+            }
+            
+            // For regular URLs, use the Adobe API
+            console.log("Handling regular URL");
+            adobeDCView.previewFile({
+                content: {
+                    location: {
+                        url: pdfData
+                    }
+                },
+                metaData: {
+                    fileName: fileName || "PDF Book",
+                    id: fileId
+                }
+            }, previewConfig)
+            .then(viewer => {
+                console.log("PDF successfully loaded from URL");
+                adobeViewer = viewer;
+            })
+            .catch(error => {
+                console.error("Error loading PDF from URL:", error);
+                handlePdfLoadError(error);
+            });
+            
+            return;
+        }
+        
+        // If we get here, we don't know how to handle the data
+        console.error("Unsupported PDF data type:", typeof pdfData);
+        document.getElementById('pdfViewer').innerHTML = 
+            `<p>Error: Unsupported PDF data type. Please try uploading the book again.</p>`;
+            
     } catch (error) {
         console.error("Exception in embedPDF:", error);
-        document.getElementById('pdfViewer').innerHTML = 
-            `<p>Error initializing PDF viewer: ${error.message || 'Unknown error'}. Please refresh the page and try again.</p>`;
+        handlePdfLoadError(error, "Error initializing PDF viewer");
     }
+}
+
+// Helper function to handle PDF loading errors
+function handlePdfLoadError(error, customMessage) {
+    const message = customMessage || "Error loading PDF";
+    const errorDetails = error ? (error.message || error.toString()) : "Unknown error";
+    
+    console.error(`${message}: ${errorDetails}`);
+    
+    // Show error message with retry button
+    document.getElementById('pdfViewer').innerHTML = `
+        <div class="pdf-error">
+            <p>${message}: ${errorDetails}</p>
+            <p>Please try again or return to the library.</p>
+            <div class="error-buttons">
+                <button id="retryButton">Retry</button>
+                <button id="backToLibraryButton">Back to Library</button>
+            </div>
+        </div>
+    `;
+    
+    // Add event listeners to buttons
+    document.getElementById('retryButton').addEventListener('click', function() {
+        // Reload the current page
+        window.location.reload();
+    });
+    
+    document.getElementById('backToLibraryButton').addEventListener('click', function() {
+        // Navigate back to the library
+        window.location.href = 'library.html';
+    });
 }
 
 // Word definition functionality
@@ -370,6 +338,26 @@ function initializeUI() {
 // Load book from session storage
 function loadBookFromSession() {
     console.log("Loading book from session storage");
+    
+    // Check if we have a PDF blob in the window variable
+    if (window.currentPdfBlob instanceof Blob) {
+        console.log("Found PDF blob in window variable");
+        const bookInfo = sessionStorage.getItem('currentBook');
+        let bookName = "PDF Book";
+        
+        if (bookInfo) {
+            try {
+                const book = JSON.parse(bookInfo);
+                bookName = book.name || bookName;
+            } catch (e) {
+                console.error("Error parsing book info:", e);
+            }
+        }
+        
+        embedPDF(window.currentPdfBlob, bookName);
+        return;
+    }
+    
     const currentBook = sessionStorage.getItem('currentBook');
     
     if (currentBook) {
@@ -403,28 +391,51 @@ function loadBookFromSession() {
                 embedPDF(book.blobData, book.name);
             } else {
                 console.error("Invalid book data format");
-                document.getElementById('pdfViewer').innerHTML = 
-                    '<p>Error: Invalid book data format. Please return to the library and try opening the book again.</p>';
-                // Don't redirect immediately to allow the user to read the error message
-                setTimeout(() => {
+                document.getElementById('pdfViewer').innerHTML = `
+                    <div class="pdf-error">
+                        <p>Error: Invalid book data format.</p>
+                        <p>Please return to the library and try opening the book again.</p>
+                        <div class="error-buttons">
+                            <button id="backToLibraryButton">Back to Library</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('backToLibraryButton').addEventListener('click', function() {
                     window.location.href = 'library.html';
-                }, 3000);
+                });
             }
         } catch (error) {
             console.error("Error parsing book from session storage:", error);
-            document.getElementById('pdfViewer').innerHTML = 
-                `<p>Error loading book: ${error.message || 'Unknown error'}. Redirecting to library...</p>`;
-            setTimeout(() => {
+            document.getElementById('pdfViewer').innerHTML = `
+                <div class="pdf-error">
+                    <p>Error loading book: ${error.message || 'Unknown error'}</p>
+                    <p>Please return to the library and try again.</p>
+                    <div class="error-buttons">
+                        <button id="backToLibraryButton">Back to Library</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('backToLibraryButton').addEventListener('click', function() {
                 window.location.href = 'library.html';
-            }, 3000);
+            });
         }
     } else {
         console.log("No book found in session storage, redirecting to library");
-        document.getElementById('pdfViewer').innerHTML = 
-            '<p>No book selected. Redirecting to library...</p>';
-        setTimeout(() => {
+        document.getElementById('pdfViewer').innerHTML = `
+            <div class="pdf-error">
+                <p>No book selected.</p>
+                <p>Please select a book from your library.</p>
+                <div class="error-buttons">
+                    <button id="backToLibraryButton">Go to Library</button>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('backToLibraryButton').addEventListener('click', function() {
             window.location.href = 'library.html';
-        }, 1000);
+        });
     }
 }
 

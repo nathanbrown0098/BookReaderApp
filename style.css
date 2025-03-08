@@ -93,6 +93,63 @@ main {
     animation: spin 1s linear infinite;
 }
 
+/* PDF Error styles */
+.pdf-error {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #f8f9fa;
+    padding: 2rem;
+    text-align: center;
+}
+
+.pdf-error p {
+    margin: 0.5rem 0;
+    color: #721c24;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+}
+
+.error-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.error-buttons button {
+    padding: 0.5rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+#retryButton {
+    background-color: #007bff;
+    color: white;
+}
+
+#retryButton:hover {
+    background-color: #0056b3;
+}
+
+#backToLibraryButton {
+    background-color: #6c757d;
+    color: white;
+}
+
+#backToLibraryButton:hover {
+    background-color: #5a6268;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
