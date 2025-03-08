@@ -22,8 +22,34 @@ document.addEventListener('DOMContentLoaded', function() {
         // Load books from localStorage
         const savedBooks = localStorage.getItem('pdfBookLibrary');
         if (savedBooks) {
-            bookLibrary = JSON.parse(savedBooks);
-            renderBookLibrary();
+            try {
+                bookLibrary = JSON.parse(savedBooks);
+                
+                // Restore Blob URLs for each book
+                bookLibrary.forEach(book => {
+                    if (book.blobData) {
+                        // Convert base64 back to Blob URL if needed
+                        if (!book.data || !book.data.startsWith('blob:')) {
+                            const byteCharacters = atob(book.blobData.split(',')[1]);
+                            const byteNumbers = new Array(byteCharacters.length);
+                            
+                            for (let i = 0; i < byteCharacters.length; i++) {
+                                byteNumbers[i] = byteCharacters.charCodeAt(i);
+                            }
+                            
+                            const byteArray = new Uint8Array(byteNumbers);
+                            const blob = new Blob([byteArray], { type: 'application/pdf' });
+                            book.data = URL.createObjectURL(blob);
+                        }
+                    }
+                });
+                
+                renderBookLibrary();
+            } catch (error) {
+                console.error("Error loading library:", error);
+                bookLibrary = [];
+                updateEmptyLibraryMessage();
+            }
         } else {
             bookLibrary = [];
             updateEmptyLibraryMessage();
@@ -34,25 +60,36 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleBookUpload(event) {
         const file = event.target.files[0];
         if (file && file.type === 'application/pdf') {
-            // Create a book object
-            const newBook = {
-                id: generateUniqueId(),
-                name: file.name,
-                dateAdded: new Date().toISOString(),
-                data: URL.createObjectURL(file)
+            // Read the file as a data URL for storage
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const blobData = e.target.result; // This is a data URL (base64)
+                const blobUrl = URL.createObjectURL(file); // This is a Blob URL for immediate use
+                
+                // Create a book object
+                const newBook = {
+                    id: generateUniqueId(),
+                    name: file.name,
+                    dateAdded: new Date().toISOString(),
+                    data: blobUrl,
+                    blobData: blobData // Store the base64 data for persistence
+                };
+                
+                // Add to library
+                bookLibrary.push(newBook);
+                
+                // Save to localStorage
+                saveLibraryToStorage();
+                
+                // Render the updated library
+                renderBookLibrary();
+                
+                // Reset the file input
+                bookUploadInput.value = '';
             };
             
-            // Add to library
-            bookLibrary.push(newBook);
-            
-            // Save to localStorage
-            saveLibraryToStorage();
-            
-            // Render the updated library
-            renderBookLibrary();
-            
-            // Reset the file input
-            bookUploadInput.value = '';
+            reader.readAsDataURL(file);
         } else {
             alert('Please upload a valid PDF file.');
         }
@@ -65,7 +102,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Save the library to localStorage
     function saveLibraryToStorage() {
-        localStorage.setItem('pdfBookLibrary', JSON.stringify(bookLibrary));
+        try {
+            localStorage.setItem('pdfBookLibrary', JSON.stringify(bookLibrary));
+        } catch (error) {
+            console.error("Error saving library:", error);
+            
+            // If the error is due to localStorage size limits, try removing the blobData
+            if (error.name === 'QuotaExceededError') {
+                alert('Your library is too large to store in browser storage. Some book data may not be saved.');
+                
+                // Create a smaller version of the library without the large blob data
+                const smallerLibrary = bookLibrary.map(book => {
+                    const { blobData, ...smallerBook } = book;
+                    return smallerBook;
+                });
+                
+                try {
+                    localStorage.setItem('pdfBookLibrary', JSON.stringify(smallerLibrary));
+                } catch (innerError) {
+                    console.error("Still couldn't save library:", innerError);
+                }
+            }
+        }
     }
     
     // Render the book library
@@ -121,16 +179,46 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Open a book in the reader
     function openBook(book) {
-        // Store the current book in sessionStorage
-        sessionStorage.setItem('currentBook', JSON.stringify(book));
+        // Make sure the book has valid data
+        if (!book.data) {
+            alert('This book cannot be opened. Please try uploading it again.');
+            return;
+        }
         
-        // Navigate to the reader page
-        window.location.href = 'reader.html';
+        // Store the current book in sessionStorage
+        try {
+            sessionStorage.setItem('currentBook', JSON.stringify(book));
+            
+            // Navigate to the reader page
+            window.location.href = 'reader.html';
+        } catch (error) {
+            console.error("Error storing book in session:", error);
+            
+            // If the error is due to sessionStorage size limits, try without the blobData
+            if (error.name === 'QuotaExceededError') {
+                const { blobData, ...smallerBook } = book;
+                try {
+                    sessionStorage.setItem('currentBook', JSON.stringify(smallerBook));
+                    window.location.href = 'reader.html';
+                } catch (innerError) {
+                    console.error("Still couldn't store book:", innerError);
+                    alert('This book is too large to open. Please try a smaller PDF file.');
+                }
+            } else {
+                alert('There was an error opening this book. Please try again.');
+            }
+        }
     }
     
     // Remove a book from the library
     function removeBook(bookId) {
         if (confirm('Are you sure you want to remove this book from your library?')) {
+            // Find the book to revoke its Blob URL
+            const bookToRemove = bookLibrary.find(book => book.id === bookId);
+            if (bookToRemove && bookToRemove.data && bookToRemove.data.startsWith('blob:')) {
+                URL.revokeObjectURL(bookToRemove.data);
+            }
+            
             // Filter out the book with the given ID
             bookLibrary = bookLibrary.filter(book => book.id !== bookId);
             

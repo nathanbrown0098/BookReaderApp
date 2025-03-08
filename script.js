@@ -22,8 +22,23 @@ function goToPage(pageNumber) {
 }
 
 // Embed the PDF into the viewer
-function embedPDF(pdfURL) {   
-    const adobeDCView = new AdobeDC.View({ clientId: CLIENT_ID, divId: "pdfViewer" });
+function embedPDF(pdfURL, fileName) {   
+    // Make sure Adobe DC View is loaded
+    if (!window.AdobeDC) {
+        console.error("Adobe DC View SDK is not loaded yet");
+        return;
+    }
+
+    // Initialize the Adobe DC View
+    const adobeDCView = new AdobeDC.View({
+        clientId: CLIENT_ID,
+        divId: "pdfViewer"
+    });
+
+    // Create a unique file ID
+    const fileId = Date.now().toString();
+
+    // Preview the file
     const previewFilePromise = adobeDCView.previewFile({
         content: {
             location: {
@@ -31,16 +46,21 @@ function embedPDF(pdfURL) {
             }
         },
         metaData: {
-            fileName: "PDF Book"
+            fileName: fileName || "PDF Book",
+            id: fileId
         }
     }, {
         showDownloadPDF: true,
-        showPrintPDF: true
+        showPrintPDF: true,
+        showAnnotationTools: true
     });
 
     // Store the viewer instance
     previewFilePromise.then(viewer => {
+        console.log("PDF successfully loaded");
         adobeViewer = viewer;
+    }).catch(error => {
+        console.error("Error loading PDF:", error);
     });
 }
 
@@ -162,8 +182,25 @@ function loadBookFromSession() {
     const currentBook = sessionStorage.getItem('currentBook');
     
     if (currentBook) {
-        const book = JSON.parse(currentBook);
-        embedPDF(book.data);
+        try {
+            const book = JSON.parse(currentBook);
+            console.log("Loading book:", book.name);
+            
+            // Check if the book data is a Blob URL or a base64 string
+            if (book.data && book.data.startsWith('blob:')) {
+                // It's already a Blob URL, use it directly
+                embedPDF(book.data, book.name);
+            } else if (book.data && book.data.startsWith('data:application/pdf')) {
+                // It's a base64 data URL, use it directly
+                embedPDF(book.data, book.name);
+            } else {
+                console.error("Invalid book data format");
+                window.location.href = 'library.html';
+            }
+        } catch (error) {
+            console.error("Error loading book:", error);
+            window.location.href = 'library.html';
+        }
     } else {
         // If no book in session, redirect to library
         window.location.href = 'library.html';
@@ -172,11 +209,18 @@ function loadBookFromSession() {
 
 // Initialize everything
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("Document loaded, initializing viewer");
+    
     // Check if Adobe DC View is ready
     if (window.AdobeDC) {
+        console.log("Adobe DC SDK is ready");
         initializeAdobeViewer();
     } else {
-        document.addEventListener('adobe_dc_view_sdk.ready', initializeAdobeViewer);
+        console.log("Waiting for Adobe DC SDK to load");
+        document.addEventListener('adobe_dc_view_sdk.ready', function() {
+            console.log("Adobe DC SDK is now ready");
+            initializeAdobeViewer();
+        });
     }
     
     function initializeAdobeViewer() {
