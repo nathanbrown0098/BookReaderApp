@@ -63,6 +63,39 @@ main {
     flex: 1;
     min-height: 800px;
     border: 1px solid #ccc;
+    position: relative;
+}
+
+/* Loading indicator styles */
+.loading-pdf {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #f8f9fa;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.loading-pdf::after {
+    content: '';
+    width: 50px;
+    height: 50px;
+    margin-top: 20px;
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .word-tools {
@@ -148,6 +181,17 @@ main {
 
 #savedWordsList li button:hover {
     background-color: #c82333;
+}
+
+/* Error message styles */
+#pdfViewer p {
+    padding: 20px;
+    text-align: center;
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    margin: 20px;
 }
 
 /* Highlighted words style */
