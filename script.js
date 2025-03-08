@@ -1,36 +1,5 @@
-import { makeAutoObservable, runInAction } from 'https://cdn.skypack.dev/mobx';
-
-// MobX state management (if you're using MobX)
-class AnnotationStore {
-    highlightedTextDict = {};
-
-    constructor() {
-        makeAutoObservable(this); // Automatically make all fields observable and actions for methods
-    }
-
-    addHighlight(pageNumber, text) {
-        // Ensure that the state mutation is wrapped in a MobX action
-        runInAction(() => {
-            // Check if the page's highlight array exists, if not, initialize it
-            if (!this.highlightedTextDict[pageNumber]) {
-                this.highlightedTextDict[pageNumber] = [];
-            }
-            // Push the highlight text into the array for that page
-            this.highlightedTextDict[pageNumber].push(text);
-        });
-    }
-}
-
-const annotationStore = new AnnotationStore();
-
-// Define your Adobe Client ID (get it from Adobe PDF Embed API dashboard)
-const CLIENT_ID = 'd5d01981d6594f918d6526e3c250903f'; // Replace with your client ID
-const eventOptions = {
-    // If no event is passed in listenOn, all annotation events will be received
-    listenOn: [
-        "ANNOTATION_SELECTED"
-    ]
-}; 
+// Define your Adobe Client ID
+const CLIENT_ID = 'd5d01981d6594f918d6526e3c250903f';
 
 // Handle file upload
 function handleFileUpload(fileInput, embedPDF) {
@@ -47,34 +16,19 @@ function handleFileUpload(fileInput, embedPDF) {
 
 // Embed the PDF into the viewer
 function embedPDF(pdfURL) {   
-    // Initialize the Adobe PDF Embed API viewer
-    var adobeDCView = new AdobeDC.View({ clientId: CLIENT_ID, divId: "pdfViewer" });
-    var previewFilePromise = adobeDCView.previewFile({
+    const adobeDCView = new AdobeDC.View({ clientId: CLIENT_ID, divId: "pdfViewer" });
+    adobeDCView.previewFile({
         content: {
             location: {
-                url: pdfURL // URL for the uploaded PDF
+                url: pdfURL
             }
         },
         metaData: {
-            fileName: "Uploaded PDF",
-            id: "77c6fa5d-6d74-4104-8349-657c8411a834"
+            fileName: "Uploaded PDF"
         }
     }, {
         showDownloadPDF: true,
-        showPrintPDF: true,
-        enableAnnotationAPIs: true, // Enable annotation APIs
-        includePDFAnnotations: true // Include existing annotations
-    });
-
-    // Initialize the annotation manager
-    previewFilePromise.then(adobeViewer => {
-        adobeViewer.getAnnotationManager().then(annotationManager => {
-            // Listen for updates to annotations (like highlights)
-            annotationManager.registerEventListener(
-                function(event) { console.log(event.type, event.data) },
-                eventOptions 
-            );
-        });
+        showPrintPDF: true
     });
 }
 
@@ -95,23 +49,123 @@ function goToPage(pageNumber) {
     }
 }
 
+// Word definition functionality
+async function defineWord(word) {
+    try {
+        const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+        if (!response.ok) {
+            throw new Error('Word not found');
+        }
+        const data = await response.json();
+        return formatDefinition(data[0]);
+    } catch (error) {
+        return { error: error.message };
+    }
+}
+
+function formatDefinition(data) {
+    return {
+        word: data.word,
+        phonetic: data.phonetic || '',
+        meanings: data.meanings.map(meaning => ({
+            partOfSpeech: meaning.partOfSpeech,
+            definitions: meaning.definitions.slice(0, 2).map(def => def.definition)
+        }))
+    };
+}
+
+// Word list management
+function saveWord(word, definition) {
+    const savedWords = getSavedWords();
+    if (!savedWords.some(item => item.word === word)) {
+        savedWords.push({ word, definition });
+        localStorage.setItem('savedWords', JSON.stringify(savedWords));
+    }
+}
+
+function removeWord(word) {
+    const savedWords = getSavedWords().filter(item => item.word !== word);
+    localStorage.setItem('savedWords', JSON.stringify(savedWords));
+}
+
+function getSavedWords() {
+    const savedWords = localStorage.getItem('savedWords');
+    return savedWords ? JSON.parse(savedWords) : [];
+}
+
+// Initialize UI elements
+function initializeUI() {
+    const wordInput = document.getElementById('wordInput');
+    const defineButton = document.getElementById('defineButton');
+    const definitionResult = document.getElementById('definitionResult');
+    const savedWordsList = document.getElementById('savedWordsList');
+
+    // Define word button click handler
+    defineButton.addEventListener('click', async () => {
+        const word = wordInput.value.trim();
+        if (word) {
+            const definition = await defineWord(word);
+            if (definition.error) {
+                definitionResult.innerHTML = `<p class="error">${definition.error}</p>`;
+            } else {
+                const definitionHTML = `
+                    <h4>${definition.word} ${definition.phonetic}</h4>
+                    ${definition.meanings.map(meaning => `
+                        <div class="meaning">
+                            <p><em>${meaning.partOfSpeech}</em></p>
+                            <ol>
+                                ${meaning.definitions.map(def => `<li>${def}</li>`).join('')}
+                            </ol>
+                        </div>
+                    `).join('')}
+                    <button id="saveWord">Save to My Word List</button>
+                `;
+                definitionResult.innerHTML = definitionHTML;
+
+                // Add save button handler
+                document.getElementById('saveWord').addEventListener('click', () => {
+                    saveWord(definition.word, definition);
+                    updateWordList();
+                });
+            }
+        }
+    });
+
+    // Enter key handler for word input
+    wordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            defineButton.click();
+        }
+    });
+
+    // Initialize word list
+    function updateWordList() {
+        const savedWords = getSavedWords();
+        savedWordsList.innerHTML = savedWords.map(item => `
+            <li>
+                <span>${item.word}</span>
+                <button class="remove-word" data-word="${item.word}">Remove</button>
+            </li>
+        `).join('');
+
+        // Add remove button handlers
+        document.querySelectorAll('.remove-word').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const word = e.target.dataset.word;
+                removeWord(word);
+                updateWordList();
+            });
+        });
+    }
+
+    // Initial word list update
+    updateWordList();
+}
+
 // Initialize everything
 const fileInput = document.getElementById('fileInput');
 handleFileUpload(fileInput, embedPDF);
 
 const pageInput = document.getElementById('pageNumberInput');
 setupNavigation(pageInput);
-
-// Example of sending the highlighted text to the backend (could use an API for this)
-function sendHighlightedTextToBackend(data) {
-    fetch('/save-highlighted-text', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-    })
-    .then(response => response.json())
-    .then(data => console.log('Successfully saved highlighted text:', data))
-    .catch((error) => console.error('Error saving highlighted text:', error));
-}
+initializeUI();
