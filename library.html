@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Book Library</title>
+    <link rel="stylesheet" href="library.css">
+</head>
+<body>
+    <header>
+        <h1>My PDF Book Library</h1>
+        <div class="upload-container">
+            <label for="bookUpload" class="upload-button">
+                <span class="icon">+</span>
+                Upload New Book
+            </label>
+            <input type="file" id="bookUpload" accept="application/pdf" style="display: none;">
+        </div>
+    </header>
+    
+    <main>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search your books...">
+        </div>
+        
+        <div class="books-container" id="booksContainer">
+            <!-- Books will be dynamically added here -->
+            <div class="empty-library-message" id="emptyLibraryMessage">
+                <p>Your library is empty. Upload a PDF book to get started!</p>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <p>PDF Book Reader - Your personal reading companion</p>
+    </footer>
+    
+    <!-- Book template (hidden, used for cloning) -->
+    <template id="bookTemplate">
+        <div class="book-card">
+            <div class="book-thumbnail">
+                <!-- Thumbnail will be set dynamically -->
+            </div>
+            <div class="book-info">
+                <h3 class="book-title">Book Title</h3>
+                <p class="book-date">Added: <span class="date-added">Date</span></p>
+            </div>
+            <div class="book-actions">
+                <button class="open-book">Open</button>
+                <button class="remove-book">Remove</button>
+            </div>
+        </div>
+    </template>
+    
+    <script src="library.js"></script>
+</body>
+</html> 

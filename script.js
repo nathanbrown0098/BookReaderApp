@@ -1,37 +1,6 @@
 // Define your Adobe Client ID
 const CLIENT_ID = 'd5d01981d6594f918d6526e3c250903f';
 
-// Handle file upload
-function handleFileUpload(fileInput, embedPDF) {
-    fileInput.addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        if (file && file.type === 'application/pdf') {
-            const fileURL = URL.createObjectURL(file);
-            embedPDF(fileURL);
-        } else {
-            alert('Please upload a valid PDF file.');
-        }
-    });
-}
-
-// Embed the PDF into the viewer
-function embedPDF(pdfURL) {   
-    const adobeDCView = new AdobeDC.View({ clientId: CLIENT_ID, divId: "pdfViewer" });
-    adobeDCView.previewFile({
-        content: {
-            location: {
-                url: pdfURL
-            }
-        },
-        metaData: {
-            fileName: "Uploaded PDF"
-        }
-    }, {
-        showDownloadPDF: true,
-        showPrintPDF: true
-    });
-}
-
 // Setup page navigation
 function setupNavigation(pageInput) {
     pageInput.addEventListener('input', function() {
@@ -42,11 +11,37 @@ function setupNavigation(pageInput) {
     });
 }
 
+// Global variable for the Adobe viewer
+let adobeViewer = null;
+
 // Jump to a specific page
 function goToPage(pageNumber) {
     if (adobeViewer) {
         adobeViewer.gotoPage(pageNumber);
     }
+}
+
+// Embed the PDF into the viewer
+function embedPDF(pdfURL) {   
+    const adobeDCView = new AdobeDC.View({ clientId: CLIENT_ID, divId: "pdfViewer" });
+    const previewFilePromise = adobeDCView.previewFile({
+        content: {
+            location: {
+                url: pdfURL
+            }
+        },
+        metaData: {
+            fileName: "PDF Book"
+        }
+    }, {
+        showDownloadPDF: true,
+        showPrintPDF: true
+    });
+
+    // Store the viewer instance
+    previewFilePromise.then(viewer => {
+        adobeViewer = viewer;
+    });
 }
 
 // Word definition functionality
@@ -162,10 +157,34 @@ function initializeUI() {
     updateWordList();
 }
 
-// Initialize everything
-const fileInput = document.getElementById('fileInput');
-handleFileUpload(fileInput, embedPDF);
+// Load book from session storage
+function loadBookFromSession() {
+    const currentBook = sessionStorage.getItem('currentBook');
+    
+    if (currentBook) {
+        const book = JSON.parse(currentBook);
+        embedPDF(book.data);
+    } else {
+        // If no book in session, redirect to library
+        window.location.href = 'library.html';
+    }
+}
 
-const pageInput = document.getElementById('pageNumberInput');
-setupNavigation(pageInput);
-initializeUI();
+// Initialize everything
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if Adobe DC View is ready
+    if (window.AdobeDC) {
+        initializeAdobeViewer();
+    } else {
+        document.addEventListener('adobe_dc_view_sdk.ready', initializeAdobeViewer);
+    }
+    
+    function initializeAdobeViewer() {
+        loadBookFromSession();
+        
+        const pageInput = document.getElementById('pageNumberInput');
+        setupNavigation(pageInput);
+        
+        initializeUI();
+    }
+});
