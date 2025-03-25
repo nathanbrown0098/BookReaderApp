@@ -1,3 +1,10 @@
+/**
+ * PDF Book Reader - Library Page Script
+ * 
+ * This script handles the book library management functionality
+ * for the library page of the PDF Book Reader application.
+ */
+
 // Library management functionality
 document.addEventListener('DOMContentLoaded', function() {
     // DOM Elements
@@ -6,6 +13,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const emptyLibraryMessage = document.getElementById('emptyLibraryMessage');
     const searchInput = document.getElementById('searchInput');
     const bookTemplate = document.getElementById('bookTemplate');
+    
+    // Check if all required elements exist
+    if (!bookUploadInput || !booksContainer || !emptyLibraryMessage || !searchInput || !bookTemplate) {
+        console.error("Required DOM elements not found");
+        return;
+    }
     
     // Book library array
     let bookLibrary = [];
@@ -17,7 +30,9 @@ document.addEventListener('DOMContentLoaded', function() {
     bookUploadInput.addEventListener('change', handleBookUpload);
     searchInput.addEventListener('input', handleSearch);
     
-    // Initialize the library from localStorage
+    /**
+     * Initializes the library from localStorage
+     */
     function initializeLibrary() {
         console.log("Initializing library");
         // Load books from localStorage
@@ -64,7 +79,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Handle book upload
+    /**
+     * Handles the book upload process
+     * @param {Event} event - The file input change event
+     */
     function handleBookUpload(event) {
         const file = event.target.files[0];
         if (file && file.type === 'application/pdf') {
@@ -138,12 +156,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Generate a unique ID for each book
+    /**
+     * Generates a unique ID for a book
+     * @returns {string} - A unique ID
+     */
     function generateUniqueId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     }
     
-    // Save the library to localStorage
+    /**
+     * Saves the library to localStorage
+     */
     function saveLibraryToStorage() {
         try {
             console.log(`Saving ${bookLibrary.length} books to localStorage`);
@@ -171,7 +194,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Render the book library
+    /**
+     * Renders the book library in the UI
+     */
     function renderBookLibrary() {
         console.log("Rendering book library");
         // Clear the container except for the empty message
@@ -192,7 +217,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Create a book element from the template
+    /**
+     * Creates a book element from the template
+     * @param {Object} book - The book object
+     * @returns {HTMLElement} - The book element
+     */
     function createBookElement(book) {
         const bookElement = document.importNode(bookTemplate.content, true).querySelector('.book-card');
         
@@ -223,7 +252,10 @@ document.addEventListener('DOMContentLoaded', function() {
         return bookElement;
     }
     
-    // Open a book in the reader
+    /**
+     * Opens a book in the reader
+     * @param {Object} book - The book to open
+     */
     function openBook(book) {
         console.log(`Opening book: ${book.name}`);
         
@@ -235,13 +267,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 dateAdded: book.dateAdded
             };
             
-            // If we have a blob URL, use it directly
-            if (book.data && book.data.startsWith('blob:')) {
-                console.log("Using blob URL for opening");
-                bookForSession.data = book.data;
-            } 
-            // If we have base64 data, use that
-            else if (book.blobData && book.blobData.startsWith('data:application/pdf')) {
+            // If we have base64 data, use that as the primary source
+            if (book.blobData && book.blobData.startsWith('data:application/pdf')) {
                 console.log("Using base64 data for opening");
                 bookForSession.data = book.blobData;
             }
@@ -263,7 +290,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Remove a book from the library
+    /**
+     * Removes a book from the library
+     * @param {string} bookId - The ID of the book to remove
+     */
     function removeBook(bookId) {
         if (confirm('Are you sure you want to remove this book from your library?')) {
             console.log(`Removing book with ID: ${bookId}`);
@@ -286,7 +316,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Handle search functionality
+    /**
+     * Handles the search functionality
+     */
     function handleSearch() {
         const searchTerm = searchInput.value.toLowerCase();
         
@@ -324,7 +356,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Update empty library message visibility
+    /**
+     * Updates the empty library message visibility
+     */
     function updateEmptyLibraryMessage() {
         if (bookLibrary.length === 0) {
             emptyLibraryMessage.style.display = 'block';
